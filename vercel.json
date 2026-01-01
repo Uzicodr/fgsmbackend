@@ -1,0 +1,8 @@
+{
+  "framework": "fastapi",
+  "python": {
+    "version": "3.11"
+  },
+  "buildCommand": "pip install -r requirements.txt",
+  "outputDirectory": "api"
+}
