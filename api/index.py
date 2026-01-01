@@ -8,19 +8,37 @@ import io
 from PIL import Image
 import base64
 import os
+import requests
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_URL = "https://raw.githubusercontent.com/Uzicodr/backup_repo/master/mnist_model.pth"
+MODEL_PATH = "/tmp/mnist_model.pth"
 
 app = FastAPI(title="FGSM MNIST Robustness API")
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")  # Use CPU on Vercel
 
-model = MNISTModel().to(device)
-model_path = os.path.join(BASE_DIR, "mnist_model.pth")
-model.load_state_dict(torch.load(model_path, map_location=device))
-model.eval()
+# Load model with lazy loading
+_model = None
+_fgsm = None
 
-fgsm = FGSM(model)
+def get_model():
+    global _model, _fgsm
+    if _model is None:
+        # Download model if not cached
+        if not os.path.exists(MODEL_PATH):
+            print("Downloading model...")
+            response = requests.get(MODEL_URL)
+            with open(MODEL_PATH, 'wb') as f:
+                f.write(response.content)
+        
+        _model = MNISTModel().to(device)
+        _model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+        _model.eval()
+        _fgsm = FGSM(_model)
+    
+    return _model, _fgsm
+
 
 
 @app.get("/")
@@ -34,6 +52,8 @@ async def attack(
     epsilon: float = Form(...)
 ):
     print("Received:", file.filename, "epsilon:", epsilon)
+    
+    model, fgsm = get_model()
 
     image_bytes = await file.read()
 
