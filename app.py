@@ -65,3 +65,6 @@ async def attack(
         "original_image": f"data:image/png;base64,{to_base64(original_tensor)}",
         "adversarial_image": f"data:image/png;base64,{to_base64(adversarial_tensor)}",
     }
+@app.get("/")
+async def root():
+    return {"message": "FGSM MNIST Robustness API", "endpoint": "/attack"}
